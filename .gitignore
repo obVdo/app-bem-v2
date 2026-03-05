@@ -1,0 +1,9 @@
+out_dir/
+out_figs/
+out_report/
+config.json
+product.json
+__pycache__/
+*.pyc
+*.sif
+mne_1.0.2_env/
