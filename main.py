@@ -76,7 +76,7 @@ n_layers_raw = config.get('n_layers') or '3'
 n_layers = int(n_layers_raw)
 
 ico_raw = config.get('ico')
-ico = int(ico_raw) if ico_raw not in (None, '', 'None') else 4
+ico = int(ico_raw) if ico_raw not in (None, '', 'None', 'none') else None
 
 if n_layers == 3:
     conductivity = (0.3, 0.006, 0.3)
