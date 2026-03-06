@@ -8,6 +8,12 @@ Outputs: bem-sol.fif (BEM conductor model for forward modelling).
 import os
 import sys
 
+# Set up FreeSurfer environment (same as sourcing SetUpFreeSurfer.sh)
+if not os.environ.get('FREESURFER_HOME'):
+    os.environ['FREESURFER_HOME'] = '/usr/local/freesurfer'
+fs_home = os.environ['FREESURFER_HOME']
+os.environ['PATH'] = os.path.join(fs_home, 'bin') + ':' + os.environ.get('PATH', '')
+
 # Resolve brainlife_utils — try local copy first, then parent monorepo
 app_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(app_dir)
