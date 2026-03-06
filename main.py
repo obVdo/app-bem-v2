@@ -7,6 +7,7 @@ Outputs: bem-sol.fif (BEM conductor model for forward modelling).
 
 import os
 import sys
+import numpy as np
 
 # Set up FreeSurfer environment (same as sourcing SetUpFreeSurfer.sh)
 if not os.environ.get('FREESURFER_HOME'):
@@ -175,38 +176,56 @@ except Exception as e:
     create_product_json(report_items)
     sys.exit(1)
 
-# == QC FIGURES — BEM surfaces on MRI slices ==
-# brain_surfaces="white" overlays white matter boundary for anatomical context.
-# Falls back to no brain surface overlay if the white surface is missing.
+# == QC FIGURE FOR PRODUCT.JSON — all 3 orientations side-by-side, small ==
+# One combined image at low DPI keeps product.json under 1MB.
 _brain_surfaces = "white"
 if not os.path.isfile(os.path.join(subjects_dir, subject, 'surf', 'lh.white')):
     _brain_surfaces = None
 
-fig_paths = {}
+figs = {}
 for orientation in ('coronal', 'axial', 'sagittal'):
     try:
-        fig = mne.viz.plot_bem(
+        figs[orientation] = mne.viz.plot_bem(
             subject=subject, subjects_dir=subjects_dir,
             brain_surfaces=_brain_surfaces,
             orientation=orientation, show=False
         )
-        fig_path = os.path.join('out_figs', f'bem_{orientation}.png')
-        fig.savefig(fig_path, dpi=100, bbox_inches='tight')
-        plt.close(fig)
-        fig_paths[orientation] = fig_path
     except Exception as e:
-        add_info_to_product(
-            report_items, f"Could not plot BEM ({orientation}): {e}", "warning"
-        )
+        add_info_to_product(report_items, f"Could not plot BEM ({orientation}): {e}", "warning")
 
-# Only embed coronal in product.json (keep file small); all views go in report.html
-if 'coronal' in fig_paths:
-    add_image_to_product(report_items, 'BEM surfaces — coronal', filepath=fig_paths['coronal'])
+if figs:
+    n = len(figs)
+    combined, axes = plt.subplots(1, n, figsize=(5 * n, 4))
+    if n == 1:
+        axes = [axes]
+    for ax, (orientation, src_fig) in zip(axes, figs.items()):
+        src_fig.canvas.draw()
+        buf = src_fig.canvas.buffer_rgba()
+        img = np.asarray(buf)[..., :3]  # RGBA → RGB
+        ax.imshow(img)
+        ax.set_title(orientation, fontsize=9)
+        ax.axis('off')
+        plt.close(src_fig)
+    combined_path = os.path.join('out_figs', 'bem_overview.png')
+    combined.savefig(combined_path, dpi=72, bbox_inches='tight')
+    plt.close(combined)
+    add_image_to_product(report_items, 'BEM surfaces', filepath=combined_path)
 
-# == SAVE REPORT ==
+# == SAVE REPORT — interactive slider via report.add_bem() ==
 report = mne.Report(title='BEM Report')
-for orientation, fig_path in fig_paths.items():
-    report.add_image(fig_path, title=f'BEM surfaces — {orientation}')
+try:
+    # add_bem generates an interactive slider through all MRI slices with BEM contours.
+    # decim=4 skips every 4th slice → ~60 slices instead of ~256; width=512 is standard.
+    report.add_bem(
+        subject=subject, subjects_dir=subjects_dir,
+        title='BEM surfaces (interactive)',
+        decim=4, width=512
+    )
+except Exception as e:
+    add_info_to_product(report_items, f"Could not add interactive BEM to report: {e}", "warning")
+    # fallback: add the combined static image
+    if figs or os.path.isfile(os.path.join('out_figs', 'bem_overview.png')):
+        report.add_image(os.path.join('out_figs', 'bem_overview.png'), title='BEM surfaces')
 report.save(os.path.join('out_report', 'report.html'), overwrite=True)
 
 add_info_to_product(report_items, "BEM computation completed successfully.", "success")
