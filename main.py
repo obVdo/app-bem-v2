@@ -44,7 +44,7 @@ report_items = []
 config = load_config()
 
 # == RESOLVE FREESURFER DIRECTORY ==
-fs_path      = config.get('freesurfer')
+fs_path      = config.get('freesurfer') or config.get('output')
 subjects_dir = config.get('subjects_dir')
 subject      = config.get('subject')
 
