@@ -76,7 +76,7 @@ if not os.path.isdir(os.path.join(subjects_dir, subject)):
     create_product_json(report_items)
     sys.exit(1)
 
-add_info_to_product(report_items, f"Subject: {subject} | subjects_dir: {subjects_dir}", "info")
+add_info_to_product(report_items, f"Subject: {subject}", "info")
 
 # == PARAMETERS ==
 n_layers_raw = config.get('n_layers') or '3'
