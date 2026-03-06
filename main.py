@@ -38,7 +38,7 @@ import matplotlib.pyplot as plt
 import mne
 
 # == SETUP ==
-ensure_output_dirs('out_dir', 'out_figs', 'out_reports')
+ensure_output_dirs('out_dir', 'out_figs', 'out_dir_report')
 report_items = []
 
 # == LOAD CONFIG ==
@@ -223,7 +223,7 @@ except Exception as e:
     add_info_to_product(report_items, f"Could not add interactive BEM to report: {e}", "warning")
     if os.path.isfile(os.path.join('out_figs', 'bem_thumb.png')):
         report.add_image(os.path.join('out_figs', 'bem_thumb.png'), title='BEM surfaces')
-report.save(os.path.join('out_reports', 'index.html'), overwrite=True)
+report.save(os.path.join('out_dir_report', 'report.html'), overwrite=True)
 
 add_info_to_product(report_items, "BEM computation completed successfully.", "success")
 create_product_json(report_items)
