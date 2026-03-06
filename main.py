@@ -176,38 +176,50 @@ except Exception as e:
     create_product_json(report_items)
     sys.exit(1)
 
-# == QC FIGURE FOR PRODUCT.JSON — single middle coronal slice ==
+# == QC FIGURE FOR PRODUCT.JSON — middle slice from all 3 orientations, side-by-side ==
 _brain_surfaces = "white"
 if not os.path.isfile(os.path.join(subjects_dir, subject, 'surf', 'lh.white')):
     _brain_surfaces = None
 
-try:
-    fig = mne.viz.plot_bem(
-        subject=subject, subjects_dir=subjects_dir,
-        brain_surfaces=_brain_surfaces,
-        orientation='coronal', show=False
-    )
-    # Grab the middle subplot (most informative slice)
+def _crop_middle_slice(fig):
+    """Render fig, crop out the middle subplot, return as RGB array."""
     axes = fig.axes
     mid_ax = axes[len(axes) // 2]
-    fig_single, ax_single = plt.subplots(figsize=(4, 4))
-    mid_ax.figure.canvas.draw()
-    buf = mid_ax.figure.canvas.buffer_rgba()
+    fig.canvas.draw()
+    buf = fig.canvas.buffer_rgba()
     full_img = np.asarray(buf)[..., :3]
-    # Crop to the bounding box of the middle axis
     bbox = mid_ax.get_position()
     h, w = full_img.shape[:2]
     x0, x1 = int(bbox.x0 * w), int(bbox.x1 * w)
     y0, y1 = int((1 - bbox.y1) * h), int((1 - bbox.y0) * h)
-    ax_single.imshow(full_img[y0:y1, x0:x1])
-    ax_single.axis('off')
-    plt.close(fig)
+    return full_img[y0:y1, x0:x1]
+
+slices = {}
+for orientation in ('coronal', 'axial', 'sagittal'):
+    try:
+        fig = mne.viz.plot_bem(
+            subject=subject, subjects_dir=subjects_dir,
+            brain_surfaces=_brain_surfaces,
+            orientation=orientation, show=False
+        )
+        slices[orientation] = _crop_middle_slice(fig)
+        plt.close(fig)
+    except Exception as e:
+        add_info_to_product(report_items, f"Could not plot BEM ({orientation}): {e}", "warning")
+
+if slices:
+    n = len(slices)
+    combined, axes = plt.subplots(1, n, figsize=(4 * n, 4))
+    if n == 1:
+        axes = [axes]
+    for ax, (orientation, img) in zip(axes, slices.items()):
+        ax.imshow(img)
+        ax.set_title(orientation, fontsize=10)
+        ax.axis('off')
     thumb_path = os.path.join('out_figs', 'bem_thumb.png')
-    fig_single.savefig(thumb_path, dpi=72, bbox_inches='tight')
-    plt.close(fig_single)
-    add_image_to_product(report_items, 'BEM surfaces (coronal)', filepath=thumb_path)
-except Exception as e:
-    add_info_to_product(report_items, f"Could not generate BEM thumbnail: {e}", "warning")
+    combined.savefig(thumb_path, dpi=100, bbox_inches='tight')
+    plt.close(combined)
+    add_image_to_product(report_items, 'BEM surfaces — middle slice', filepath=thumb_path)
 
 # == SAVE REPORT — interactive slider via report.add_bem() ==
 # add_bem generates a slider through all MRI slices with BEM contours.
