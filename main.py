@@ -38,7 +38,7 @@ import matplotlib.pyplot as plt
 import mne
 
 # == SETUP ==
-ensure_output_dirs('out_dir', 'out_figs', 'out_report')
+ensure_output_dirs('out_dir', 'out_figs', 'out_reports')
 report_items = []
 
 # == LOAD CONFIG ==
@@ -176,46 +176,44 @@ except Exception as e:
     create_product_json(report_items)
     sys.exit(1)
 
-# == QC FIGURE FOR PRODUCT.JSON — all 3 orientations side-by-side, small ==
-# One combined image at low DPI keeps product.json under 1MB.
+# == QC FIGURE FOR PRODUCT.JSON — single middle coronal slice ==
 _brain_surfaces = "white"
 if not os.path.isfile(os.path.join(subjects_dir, subject, 'surf', 'lh.white')):
     _brain_surfaces = None
 
-figs = {}
-for orientation in ('coronal', 'axial', 'sagittal'):
-    try:
-        figs[orientation] = mne.viz.plot_bem(
-            subject=subject, subjects_dir=subjects_dir,
-            brain_surfaces=_brain_surfaces,
-            orientation=orientation, show=False
-        )
-    except Exception as e:
-        add_info_to_product(report_items, f"Could not plot BEM ({orientation}): {e}", "warning")
-
-if figs:
-    n = len(figs)
-    combined, axes = plt.subplots(1, n, figsize=(5 * n, 4))
-    if n == 1:
-        axes = [axes]
-    for ax, (orientation, src_fig) in zip(axes, figs.items()):
-        src_fig.canvas.draw()
-        buf = src_fig.canvas.buffer_rgba()
-        img = np.asarray(buf)[..., :3]  # RGBA → RGB
-        ax.imshow(img)
-        ax.set_title(orientation, fontsize=9)
-        ax.axis('off')
-        plt.close(src_fig)
-    combined_path = os.path.join('out_figs', 'bem_overview.png')
-    combined.savefig(combined_path, dpi=72, bbox_inches='tight')
-    plt.close(combined)
-    add_image_to_product(report_items, 'BEM surfaces', filepath=combined_path)
+try:
+    fig = mne.viz.plot_bem(
+        subject=subject, subjects_dir=subjects_dir,
+        brain_surfaces=_brain_surfaces,
+        orientation='coronal', show=False
+    )
+    # Grab the middle subplot (most informative slice)
+    axes = fig.axes
+    mid_ax = axes[len(axes) // 2]
+    fig_single, ax_single = plt.subplots(figsize=(4, 4))
+    mid_ax.figure.canvas.draw()
+    buf = mid_ax.figure.canvas.buffer_rgba()
+    full_img = np.asarray(buf)[..., :3]
+    # Crop to the bounding box of the middle axis
+    bbox = mid_ax.get_position()
+    h, w = full_img.shape[:2]
+    x0, x1 = int(bbox.x0 * w), int(bbox.x1 * w)
+    y0, y1 = int((1 - bbox.y1) * h), int((1 - bbox.y0) * h)
+    ax_single.imshow(full_img[y0:y1, x0:x1])
+    ax_single.axis('off')
+    plt.close(fig)
+    thumb_path = os.path.join('out_figs', 'bem_thumb.png')
+    fig_single.savefig(thumb_path, dpi=72, bbox_inches='tight')
+    plt.close(fig_single)
+    add_image_to_product(report_items, 'BEM surfaces (coronal)', filepath=thumb_path)
+except Exception as e:
+    add_info_to_product(report_items, f"Could not generate BEM thumbnail: {e}", "warning")
 
 # == SAVE REPORT — interactive slider via report.add_bem() ==
+# add_bem generates a slider through all MRI slices with BEM contours.
+# decim=4 → ~60 slices; width=512 is standard MRI resolution.
 report = mne.Report(title='BEM Report')
 try:
-    # add_bem generates an interactive slider through all MRI slices with BEM contours.
-    # decim=4 skips every 4th slice → ~60 slices instead of ~256; width=512 is standard.
     report.add_bem(
         subject=subject, subjects_dir=subjects_dir,
         title='BEM surfaces (interactive)',
@@ -223,10 +221,9 @@ try:
     )
 except Exception as e:
     add_info_to_product(report_items, f"Could not add interactive BEM to report: {e}", "warning")
-    # fallback: add the combined static image
-    if figs or os.path.isfile(os.path.join('out_figs', 'bem_overview.png')):
-        report.add_image(os.path.join('out_figs', 'bem_overview.png'), title='BEM surfaces')
-report.save(os.path.join('out_report', 'report.html'), overwrite=True)
+    if os.path.isfile(os.path.join('out_figs', 'bem_thumb.png')):
+        report.add_image(os.path.join('out_figs', 'bem_thumb.png'), title='BEM surfaces')
+report.save(os.path.join('out_reports', 'index.html'), overwrite=True)
 
 add_info_to_product(report_items, "BEM computation completed successfully.", "success")
 create_product_json(report_items)
