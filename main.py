@@ -182,6 +182,7 @@ _brain_surfaces = "white"
 if not os.path.isfile(os.path.join(subjects_dir, subject, 'surf', 'lh.white')):
     _brain_surfaces = None
 
+fig_paths = {}
 for orientation in ('coronal', 'axial', 'sagittal'):
     try:
         fig = mne.viz.plot_bem(
@@ -190,16 +191,22 @@ for orientation in ('coronal', 'axial', 'sagittal'):
             orientation=orientation, show=False
         )
         fig_path = os.path.join('out_figs', f'bem_{orientation}.png')
-        fig.savefig(fig_path, dpi=150, bbox_inches='tight')
+        fig.savefig(fig_path, dpi=100, bbox_inches='tight')
         plt.close(fig)
-        add_image_to_product(report_items, f'BEM surfaces — {orientation}', filepath=fig_path)
+        fig_paths[orientation] = fig_path
     except Exception as e:
         add_info_to_product(
             report_items, f"Could not plot BEM ({orientation}): {e}", "warning"
         )
 
+# Only embed coronal in product.json (keep file small); all views go in report.html
+if 'coronal' in fig_paths:
+    add_image_to_product(report_items, 'BEM surfaces — coronal', filepath=fig_paths['coronal'])
+
 # == SAVE REPORT ==
 report = mne.Report(title='BEM Report')
+for orientation, fig_path in fig_paths.items():
+    report.add_image(fig_path, title=f'BEM surfaces — {orientation}')
 report.save(os.path.join('out_report', 'report.html'), overwrite=True)
 
 add_info_to_product(report_items, "BEM computation completed successfully.", "success")
