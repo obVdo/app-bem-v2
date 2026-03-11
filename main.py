@@ -167,12 +167,12 @@ except Exception as e:
     sys.exit(1)
 
 # == SAVE BEM SOLUTION ==
-bem_path = os.path.join('out_dir', 'bem-sol.fif')
+bem_path = os.path.join('out_dir', 'meg.fif')  # meg/fif datatype requires meg.fif
 try:
     mne.write_bem_solution(bem_path, bem_sol, overwrite=True)
     add_info_to_product(report_items, f"Saved: {bem_path}", "info")
 except Exception as e:
-    add_info_to_product(report_items, f"FATAL: Could not save bem-sol.fif: {e}", "error")
+    add_info_to_product(report_items, f"FATAL: Could not save BEM solution: {e}", "error")
     create_product_json(report_items)
     sys.exit(1)
 
