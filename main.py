@@ -1,6 +1,9 @@
 """
 app-bem-v2: Compute BEM (Boundary Element Model) from FreeSurfer output.
 
+Authors : Guiomar Niso (guiomar.niso@gmail.com)
+          Antonio Caulín (antoniocaulinatienzar@gmail.com) https://github.com/AntonioCauAt
+
 Inputs : FreeSurfer subject directory (from recon-all).
 Outputs: bem-sol.fif (BEM conductor model for forward modelling).
 """
