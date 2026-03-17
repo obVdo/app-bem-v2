@@ -56,10 +56,15 @@ subject      = config.get('subject')
 
 if fs_path and os.path.isdir(fs_path):
     fs_path = os.path.abspath(fs_path)
-    if not subjects_dir:
-        subjects_dir = os.path.dirname(fs_path)
-    if not subject:
-        subject = os.path.basename(fs_path)
+    # app-freesurfer-v2 saves as freesurfer/output/ — detect this structure
+    if os.path.isdir(os.path.join(fs_path, 'output', 'mri')):
+        subjects_dir = subjects_dir or fs_path
+        subject = subject or 'output'
+    else:
+        if not subjects_dir:
+            subjects_dir = os.path.dirname(fs_path)
+        if not subject:
+            subject = os.path.basename(fs_path)
 
 if not subjects_dir or not subject:
     add_info_to_product(
@@ -133,7 +138,7 @@ if surfaces_exist:
 else:
     add_info_to_product(report_items, "Running FreeSurfer watershed BEM...", "info")
     try:
-        mne.bem.make_watershed_bem(subject, subjects_dir, overwrite=True, verbose=True)
+        mne.make_watershed_bem(subject, subjects_dir, overwrite=True, verbose=True)
         add_info_to_product(report_items, "Watershed BEM surfaces created.", "info")
     except Exception as e:
         add_info_to_product(
