@@ -20,6 +20,8 @@ fi
 FS_PATH=$(jq -r '.freesurfer // .output' config.json)
 FS_PATH=$(realpath "$FS_PATH")
 
+mkdir -p out_dir
+
 singularity exec \
   -B `pwd`/license.txt:/usr/local/freesurfer/license.txt \
   docker://brainlife/freesurfer:7.1.1 \
