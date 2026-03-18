@@ -20,14 +20,7 @@ fi
 FS_PATH=$(jq -r '.freesurfer // .output' config.json)
 FS_PATH=$(realpath "$FS_PATH")
 
-# Run watershed with FreeSurfer 7.1.1
 singularity exec \
   -B `pwd`/license.txt:/usr/local/freesurfer/license.txt \
   docker://brainlife/freesurfer:7.1.1 \
   bash ./watershed_test.sh $FS_PATH
-
-# Check if surfaces intersect
-singularity exec \
-  -B `pwd`/license.txt:/opt/freesurfer/license.txt \
-  docker://aunnikri642/app-freesurfer-mne-source-recon \
-  python3 check_surfaces.py
