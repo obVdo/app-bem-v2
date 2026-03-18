@@ -128,7 +128,11 @@ if surfaces_exist:
 else:
     add_info_to_product(report_items, "Running FreeSurfer watershed BEM...", "info")
     try:
-        mne.bem.make_watershed_bem(subject, subjects_dir, overwrite=True, verbose=True)
+        import subprocess
+        subprocess.run(
+            ['mne', 'watershed_bem', '-s', subject, '-d', subjects_dir, '-o', '-a'],
+            check=True
+        )
         add_info_to_product(report_items, "Watershed BEM surfaces created.", "info")
     except Exception as e:
         add_info_to_product(
