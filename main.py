@@ -83,6 +83,10 @@ if not os.path.isdir(os.path.join(subjects_dir, subject)):
     sys.exit(1)
 
 add_info_to_product(report_items, f"Subject: {subject}", "info")
+add_info_to_product(report_items, f"subjects_dir: {subjects_dir}", "info")
+add_info_to_product(report_items, f"subjects_dir exists: {os.path.isdir(subjects_dir)}", "info")
+add_info_to_product(report_items, f"subject dir exists: {os.path.isdir(os.path.join(subjects_dir, subject))}", "info")
+add_info_to_product(report_items, f"mri dir exists: {os.path.isdir(os.path.join(subjects_dir, subject, 'mri'))}", "info")
 
 # == PARAMETERS ==
 n_layers_raw = config.get('n_layers') or '3'
@@ -137,9 +141,10 @@ else:
         make_watershed_bem(subject, subjects_dir, overwrite=True, verbose=True)
         add_info_to_product(report_items, "Watershed BEM surfaces created.", "info")
     except Exception as e:
+        import traceback
         add_info_to_product(
             report_items,
-            f"FATAL: Watershed BEM failed: {e}\n"
+            f"FATAL: Watershed BEM failed: {e}\n{traceback.format_exc()}\n"
             "Ensure FreeSurfer is installed and recon-all has completed.",
             "error"
         )
