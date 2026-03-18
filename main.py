@@ -1,11 +1,6 @@
 """
 app-bem-v2: Compute BEM (Boundary Element Model) from FreeSurfer output.
 
-Authors : Guiomar Niso (guiomar.niso@gmail.com)
-          Antonio Caulín (antoniocaulinatienzar@gmail.com) https://github.com/AntonioCauAt
-          Maximilien Chaumon https://github.com/dnacombo
-          obVdo https://github.com/obVdo
-
 Inputs : FreeSurfer subject directory (from recon-all).
 Outputs: bem-sol.fif (BEM conductor model for forward modelling).
 """
@@ -41,7 +36,6 @@ setup_matplotlib_backend()
 import matplotlib.pyplot as plt
 
 import mne
-from mne.bem import make_watershed_bem
 
 # == SETUP ==
 ensure_output_dirs('out_dir', 'out_figs', 'out_dir_report')
@@ -83,10 +77,6 @@ if not os.path.isdir(os.path.join(subjects_dir, subject)):
     sys.exit(1)
 
 add_info_to_product(report_items, f"Subject: {subject}", "info")
-add_info_to_product(report_items, f"subjects_dir: {subjects_dir}", "info")
-add_info_to_product(report_items, f"subjects_dir exists: {os.path.isdir(subjects_dir)}", "info")
-add_info_to_product(report_items, f"subject dir exists: {os.path.isdir(os.path.join(subjects_dir, subject))}", "info")
-add_info_to_product(report_items, f"mri dir exists: {os.path.isdir(os.path.join(subjects_dir, subject, 'mri'))}", "info")
 
 # == PARAMETERS ==
 n_layers_raw = config.get('n_layers') or '3'
@@ -138,13 +128,12 @@ if surfaces_exist:
 else:
     add_info_to_product(report_items, "Running FreeSurfer watershed BEM...", "info")
     try:
-        make_watershed_bem(subject, subjects_dir, overwrite=True, atlas=True, verbose=True)
+        mne.bem.make_watershed_bem(subject, subjects_dir, overwrite=True, verbose=True)
         add_info_to_product(report_items, "Watershed BEM surfaces created.", "info")
     except Exception as e:
-        import traceback
         add_info_to_product(
             report_items,
-            f"FATAL: Watershed BEM failed: {e}\n{traceback.format_exc()}\n"
+            f"FATAL: Watershed BEM failed: {e}\n"
             "Ensure FreeSurfer is installed and recon-all has completed.",
             "error"
         )
