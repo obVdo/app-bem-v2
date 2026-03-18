@@ -17,13 +17,6 @@ else
     echo "Please set FREESURFER_LICENSE or FS_LICENSE in resource environment" && exit 1
 fi
 
-echo "=== LICENSE DEBUG ==="
-echo "FREESURFER_LICENSE: $FREESURFER_LICENSE"
-echo "FS_LICENSE: $FS_LICENSE"
-echo "license.txt content:"; cat license.txt
-echo "FS_LICENSE file content:"; cat "$FS_LICENSE"
-echo "FREESURFER_LICENSE file content:"; cat "$FREESURFER_LICENSE"
-echo "===================="
 
 
 singularity exec \
