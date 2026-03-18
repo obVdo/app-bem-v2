@@ -125,6 +125,23 @@ else:
 
 if surfaces_exist:
     add_info_to_product(report_items, "BEM surfaces found — skipping watershed step.", "info")
+    add_info_to_product(report_items, "Running FreeSurfer watershed BEM...", "info")
+    try:
+        import subprocess
+        subprocess.run(
+            ['mne', 'watershed_bem', '-s', subject, '-d', subjects_dir, '-o', '-a'],
+            check=True
+        )
+        add_info_to_product(report_items, "Watershed BEM surfaces created.", "info")
+    except Exception as e:
+        add_info_to_product(
+            report_items,
+            f"FATAL: Watershed BEM failed: {e}\n"
+            "Ensure FreeSurfer is installed and recon-all has completed.",
+            "error"
+        )
+        create_product_json(report_items)
+        sys.exit(1)
 else:
     add_info_to_product(report_items, "Running FreeSurfer watershed BEM...", "info")
     try:
