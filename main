@@ -16,8 +16,6 @@ elif [ -n "$FS_LICENSE" ] && [ -f "$FS_LICENSE" ]; then
 else
     echo "Please set FREESURFER_LICENSE or FS_LICENSE in resource environment" && exit 1
 fi
-echo "FREESURFER_LICENSE value: $FREESURFER_LICENSE"
-echo "FS_LICENSE value: $FS_LICENSE"
 echo "license.txt content:"; cat license.txt
 singularity exec \
   -B `pwd`/license.txt:/opt/freesurfer/license.txt \
