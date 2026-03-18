@@ -138,7 +138,7 @@ if surfaces_exist:
 else:
     add_info_to_product(report_items, "Running FreeSurfer watershed BEM...", "info")
     try:
-        make_watershed_bem(subject, subjects_dir, overwrite=True, verbose=True)
+        make_watershed_bem(subject, subjects_dir, overwrite=True, atlas=True, verbose=True)
         add_info_to_product(report_items, "Watershed BEM surfaces created.", "info")
     except Exception as e:
         import traceback
