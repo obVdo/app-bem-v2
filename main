@@ -9,10 +9,10 @@
 set -e
 set -x
 
-if [ -n "$FREESURFER_LICENSE" ]; then
-    echo $FREESURFER_LICENSE > license.txt
-elif [ -n "$FS_LICENSE" ] && [ -f "$FS_LICENSE" ]; then
+if [ -n "$FS_LICENSE" ] && [ -f "$FS_LICENSE" ]; then
     cp "$FS_LICENSE" license.txt
+elif [ -n "$FREESURFER_LICENSE" ]; then
+    echo $FREESURFER_LICENSE > license.txt
 else
     echo "Please set FREESURFER_LICENSE or FS_LICENSE in resource environment" && exit 1
 fi
