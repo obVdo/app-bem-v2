@@ -6,7 +6,8 @@ FS_PATH=$1
 SUBJECT=$(basename "$FS_PATH")
 SUBJECTS_DIR=$(dirname "$FS_PATH")
 
-source /usr/local/freesurfer/SetUpFreeSurfer.sh
+export FREESURFER_HOME=/usr/local/freesurfer
+source $FREESURFER_HOME/SetUpFreeSurfer.sh
 export SUBJECTS_DIR=$SUBJECTS_DIR
 
 mkdir -p $FS_PATH/bem/watershed
