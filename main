@@ -16,7 +16,14 @@ elif [ -n "$FS_LICENSE" ] && [ -f "$FS_LICENSE" ]; then
 else
     echo "Please set FREESURFER_LICENSE or FS_LICENSE in resource environment" && exit 1
 fi
+
+echo "=== LICENSE DEBUG ==="
+echo "FREESURFER_LICENSE: $FREESURFER_LICENSE"
+echo "FS_LICENSE: $FS_LICENSE"
 echo "license.txt content:"; cat license.txt
+echo "===================="
+
+
 singularity exec \
   -B `pwd`/license.txt:/opt/freesurfer/license.txt \
   docker://brainlife/mne-freesurfer:7.3.2-1.2.1 \
