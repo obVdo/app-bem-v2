@@ -21,6 +21,12 @@ cp $FS_PATH/bem/watershed/${SUBJECT}_inner_skull_surface $FS_PATH/bem/inner_skul
 cp $FS_PATH/bem/watershed/${SUBJECT}_outer_skull_surface $FS_PATH/bem/outer_skull.surf
 cp $FS_PATH/bem/watershed/${SUBJECT}_outer_skin_surface  $FS_PATH/bem/outer_skin.surf
 
+# Also copy to local out_dir for Brainlife output
+mkdir -p out_dir
+cp $FS_PATH/bem/inner_skull.surf out_dir/
+cp $FS_PATH/bem/outer_skull.surf out_dir/
+cp $FS_PATH/bem/outer_skin.surf  out_dir/
+
 echo "Watershed done. Checking topology with mris_info..."
 mris_info $FS_PATH/bem/inner_skull.surf 2>&1 | grep -E "vertices|faces"
 mris_info $FS_PATH/bem/outer_skull.surf 2>&1 | grep -E "vertices|faces"
