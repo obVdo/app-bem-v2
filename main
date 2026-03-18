@@ -9,8 +9,6 @@
 set -e
 set -x
 
-module load proxy
-
 if [ -n "$FREESURFER_LICENSE" ]; then
     echo $FREESURFER_LICENSE > license.txt
 elif [ -n "$FS_LICENSE" ] && [ -f "$FS_LICENSE" ]; then
@@ -20,6 +18,7 @@ else
 fi
 
 singularity exec \
+  -B `pwd`/license.txt:/usr/local/freesurfer/license.txt \
   -B `pwd`/license.txt:/opt/freesurfer/license.txt \
-  docker://aunnikri642/app-freesurfer-mne-source-recon \
+  docker://brainlife/mne-freesurfer:7.3.2-1.2.1 \
   python3 main.py
