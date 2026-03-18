@@ -17,10 +17,30 @@ else
     echo "Please set FREESURFER_LICENSE or FS_LICENSE in resource environment" && exit 1
 fi
 
+# Extract FreeSurfer subject path from config
+FS_PATH=$(jq -r '.freesurfer // .output' config.json)
+SUBJECT=$(basename "$FS_PATH")
+SUBJECTS_DIR=$(dirname "$(realpath "$FS_PATH")")
 
+# Step 1: Run watershed BEM with FreeSurfer 7.1.1
+singularity exec \
+  -B `pwd`/license.txt:/usr/local/freesurfer/license.txt \
+  docker://brainlife/freesurfer:7.1.1 \
+  bash -c "
+    source /usr/local/freesurfer/SetUpFreeSurfer.sh
+    export SUBJECTS_DIR=$SUBJECTS_DIR
+    mkdir -p $SUBJECTS_DIR/$SUBJECT/bem/watershed
+    mri_watershed -atlas -useSRAS \
+      -surf $SUBJECTS_DIR/$SUBJECT/bem/watershed/$SUBJECT \
+      $SUBJECTS_DIR/$SUBJECT/mri/T1.mgz \
+      $SUBJECTS_DIR/$SUBJECT/bem/watershed/ws
+    cp $SUBJECTS_DIR/$SUBJECT/bem/watershed/${SUBJECT}_inner_skull_surface $SUBJECTS_DIR/$SUBJECT/bem/inner_skull.surf
+    cp $SUBJECTS_DIR/$SUBJECT/bem/watershed/${SUBJECT}_outer_skull_surface $SUBJECTS_DIR/$SUBJECT/bem/outer_skull.surf
+    cp $SUBJECTS_DIR/$SUBJECT/bem/watershed/${SUBJECT}_outer_skin_surface  $SUBJECTS_DIR/$SUBJECT/bem/outer_skin.surf
+  "
 
+# Step 2: Run BEM model + solution with MNE
 singularity exec \
   -B `pwd`/license.txt:/opt/freesurfer/license.txt \
   docker://aunnikri642/app-freesurfer-mne-source-recon \
   python3 main.py
-
