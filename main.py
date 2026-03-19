@@ -165,7 +165,7 @@ else:
 try:
     model = mne.make_bem_model(
         subject, ico=ico, conductivity=conductivity,
-        subjects_dir=subjects_dir, verbose=True
+        subjects_dir=subjects_dir, verbose='DEBUG'
     )
     n_triangles = sum(s['ntri'] for s in model)
     add_info_to_product(
