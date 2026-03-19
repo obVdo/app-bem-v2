@@ -211,8 +211,14 @@ except Exception as e:
             skull_coords, skull_tris = mne.read_surface(outer_skull_path)
             skin_coords,  skin_tris  = mne.read_surface(outer_skin_path)
 
-            # Capture BEFORE plot (surfaces with intersection)
+            # Capture BEFORE — interactive BEM report + single slice image
             _before_img = None
+            _report_before = mne.Report(title='BEM Report — before expansion')
+            try:
+                _report_before.add_bem(subject=subject, subjects_dir=subjects_dir,
+                    title='BEM surfaces before expansion (intersection)', decim=4, width=512)
+            except Exception:
+                pass
             try:
                 _fig = mne.viz.plot_bem(subject=subject, subjects_dir=subjects_dir,
                     brain_surfaces=_brain_surfaces, orientation='axial',
@@ -347,7 +353,14 @@ except Exception as e:
     add_info_to_product(report_items, f"Could not add interactive BEM to report: {e}", "warning")
     if os.path.isfile(os.path.join('out_figs', 'bem_thumb.png')):
         report.add_image(os.path.join('out_figs', 'bem_thumb.png'), title='BEM surfaces')
+
+_expansion_fig = os.path.join('out_figs', 'bem_expansion_fix.png')
+if os.path.isfile(_expansion_fig):
+    report.add_image(_expansion_fig, title='BEM expansion fix — before/after (axial 137)')
 report.save(os.path.join('out_dir_report', 'report.html'), overwrite=True)
+
+if '_report_before' in dir() and len(_report_before) > 0:
+    _report_before.save(os.path.join('out_dir_report', 'report_before_expansion.html'), overwrite=True)
 
 if bem_ok:
     add_info_to_product(report_items, "BEM computation completed successfully.", "success")
