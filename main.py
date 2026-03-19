@@ -85,6 +85,9 @@ n_layers = int(n_layers_raw)
 ico_raw = config.get('ico')
 ico = int(ico_raw) if ico_raw not in (None, '', 'None', 'none') else None
 
+bem_expansion_raw = config.get('bem_expansion_mm')
+bem_expansion_mm = float(bem_expansion_raw) if bem_expansion_raw not in (None, '', 'None', 'none') else 8.0
+
 if n_layers == 3:
     conductivity = (0.3, 0.006, 0.3)
 elif n_layers == 1:
@@ -161,6 +164,20 @@ else:
         create_product_json(report_items)
         sys.exit(1)
 
+def _expand_anterior(coords, mm):
+    """Push outer skull/skin vertices outward, anterior-weighted.
+    Vertices facing anteriorly (+y in RAS) are pushed by up to mm mm;
+    the effect tapers to zero toward the sides and back.
+    This fixes watershed failures where defaced T1 anterior skull
+    has poor contrast, causing outer skull/skin to collapse inward.
+    """
+    centroid = coords.mean(axis=0)
+    directions = coords - centroid
+    norms = np.linalg.norm(directions, axis=1, keepdims=True)
+    unit_dirs = directions / norms
+    weight = np.clip(np.dot(unit_dirs, np.array([0., 1., 0.])), 0, None)
+    return coords + unit_dirs * (weight[:, None] * mm)
+
 # == MAKE BEM MODEL ==
 bem_ok = False
 model = None
@@ -177,11 +194,45 @@ try:
     )
     bem_ok = True
 except Exception as e:
-    add_info_to_product(
-        report_items,
-        f"WARNING: make_bem_model failed: {e} — skipping BEM solution, check surfaces in report.",
-        "error"
-    )
+    if 'not completely inside' in str(e):
+        add_info_to_product(
+            report_items,
+            f"BEM surface intersection detected — retrying with anterior expansion "
+            f"({bem_expansion_mm}mm). Likely caused by poor skull contrast in defaced T1.",
+            "warning"
+        )
+        bem_dir = os.path.join(subjects_dir, subject, 'bem')
+        outer_skull_path = os.path.join(bem_dir, 'outer_skull.surf')
+        outer_skin_path  = os.path.join(bem_dir, 'outer_skin.surf')
+        try:
+            skull_coords, skull_tris = mne.read_surface(outer_skull_path)
+            skin_coords,  skin_tris  = mne.read_surface(outer_skin_path)
+            mne.write_bem_surfaces if False else None  # noqa
+            mne.write_surface(outer_skull_path, _expand_anterior(skull_coords, bem_expansion_mm), skull_tris, overwrite=True)
+            mne.write_surface(outer_skin_path,  _expand_anterior(skin_coords,  bem_expansion_mm), skin_tris,  overwrite=True)
+            model = mne.make_bem_model(
+                subject, ico=ico, conductivity=conductivity,
+                subjects_dir=subjects_dir, verbose=False
+            )
+            n_triangles = sum(s['ntri'] for s in model)
+            add_info_to_product(
+                report_items,
+                f"BEM model after expansion: {len(model)} surface(s), {n_triangles} triangles total",
+                "info"
+            )
+            bem_ok = True
+        except Exception as e2:
+            add_info_to_product(
+                report_items,
+                f"WARNING: make_bem_model failed even after expansion: {e2} — check surfaces in report.",
+                "error"
+            )
+    else:
+        add_info_to_product(
+            report_items,
+            f"WARNING: make_bem_model failed: {e} — check surfaces in report.",
+            "error"
+        )
 
 # == MAKE BEM SOLUTION (only if model succeeded) ==
 if bem_ok:
