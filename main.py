@@ -181,6 +181,8 @@ def _expand_anterior(coords, mm):
     weight = np.clip(np.dot(unit_dirs, np.array([0., 1., 0.])), 0, None)
     return coords + unit_dirs * (weight[:, None] * mm)
 
+report = mne.Report(title='BEM Report')
+
 # == MAKE BEM MODEL ==
 bem_ok = False
 model = None
@@ -211,12 +213,11 @@ except Exception as e:
             skull_coords, skull_tris = mne.read_surface(outer_skull_path)
             skin_coords,  skin_tris  = mne.read_surface(outer_skin_path)
 
-            # Capture BEFORE — interactive BEM report + single slice image
+            # Capture BEFORE — add to shared report + single slice image
             _before_img = None
-            _report_before = mne.Report(title='BEM Report — before expansion')
             try:
-                _report_before.add_bem(subject=subject, subjects_dir=subjects_dir,
-                    title='BEM surfaces before expansion (intersection)', decim=4, width=512)
+                report.add_bem(subject=subject, subjects_dir=subjects_dir,
+                    title='BEM surfaces — BEFORE expansion (intersection)', decim=4, width=512)
             except Exception:
                 pass
             try:
@@ -342,11 +343,10 @@ if slices:
 # == SAVE REPORT — interactive slider via report.add_bem() ==
 # add_bem generates a slider through all MRI slices with BEM contours.
 # decim=4 → ~60 slices; width=512 is standard MRI resolution.
-report = mne.Report(title='BEM Report')
 try:
     report.add_bem(
         subject=subject, subjects_dir=subjects_dir,
-        title='BEM surfaces (interactive)',
+        title='BEM surfaces — AFTER expansion (fixed)' if os.path.isfile(os.path.join('out_figs', 'bem_expansion_fix.png')) else 'BEM surfaces (interactive)',
         decim=4, width=512
     )
 except Exception as e:
@@ -358,9 +358,6 @@ _expansion_fig = os.path.join('out_figs', 'bem_expansion_fix.png')
 if os.path.isfile(_expansion_fig):
     report.add_image(_expansion_fig, title='BEM expansion fix — before/after (axial 137)')
 report.save(os.path.join('out_dir_report', 'report.html'), overwrite=True)
-
-if '_report_before' in dir() and len(_report_before) > 0:
-    _report_before.save(os.path.join('out_dir_report', 'report_before_expansion.html'), overwrite=True)
 
 if bem_ok:
     add_info_to_product(report_items, "BEM computation completed successfully.", "success")
