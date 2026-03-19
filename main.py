@@ -162,6 +162,8 @@ else:
         sys.exit(1)
 
 # == MAKE BEM MODEL ==
+bem_ok = False
+model = None
 try:
     model = mne.make_bem_model(
         subject, ico=ico, conductivity=conductivity,
@@ -173,29 +175,32 @@ try:
         f"BEM model: {len(model)} surface(s), {n_triangles} triangles total",
         "info"
     )
+    bem_ok = True
 except Exception as e:
-    add_info_to_product(report_items, f"FATAL: make_bem_model failed: {e}", "error")
-    create_product_json(report_items)
-    sys.exit(1)
+    add_info_to_product(
+        report_items,
+        f"WARNING: make_bem_model failed: {e} — skipping BEM solution, check surfaces in report.",
+        "error"
+    )
 
-# == MAKE BEM SOLUTION ==
-try:
-    bem_sol = mne.make_bem_solution(model, verbose=True)
-    add_info_to_product(report_items, "BEM solution computed.", "info")
-except Exception as e:
-    add_info_to_product(report_items, f"FATAL: make_bem_solution failed: {e}", "error")
-    create_product_json(report_items)
-    sys.exit(1)
+# == MAKE BEM SOLUTION (only if model succeeded) ==
+if bem_ok:
+    try:
+        bem_sol = mne.make_bem_solution(model, verbose=True)
+        add_info_to_product(report_items, "BEM solution computed.", "info")
+    except Exception as e:
+        add_info_to_product(report_items, f"FATAL: make_bem_solution failed: {e}", "error")
+        bem_ok = False
 
 # == SAVE BEM SOLUTION ==
-bem_path = os.path.join('out_dir', 'meg.fif')  # meg/fif datatype requires meg.fif
-try:
-    mne.write_bem_solution(bem_path, bem_sol, overwrite=True)
-    add_info_to_product(report_items, f"Saved: {bem_path}", "info")
-except Exception as e:
-    add_info_to_product(report_items, f"FATAL: Could not save BEM solution: {e}", "error")
-    create_product_json(report_items)
-    sys.exit(1)
+if bem_ok:
+    bem_path = os.path.join('out_dir', 'meg.fif')  # meg/fif datatype requires meg.fif
+    try:
+        mne.write_bem_solution(bem_path, bem_sol, overwrite=True)
+        add_info_to_product(report_items, f"Saved: {bem_path}", "info")
+    except Exception as e:
+        add_info_to_product(report_items, f"FATAL: Could not save BEM solution: {e}", "error")
+        bem_ok = False
 
 # == QC FIGURE FOR PRODUCT.JSON — middle slice from all 3 orientations, side-by-side ==
 _brain_surfaces = "white"
@@ -258,6 +263,9 @@ except Exception as e:
         report.add_image(os.path.join('out_figs', 'bem_thumb.png'), title='BEM surfaces')
 report.save(os.path.join('out_dir_report', 'report.html'), overwrite=True)
 
-add_info_to_product(report_items, "BEM computation completed successfully.", "success")
+if bem_ok:
+    add_info_to_product(report_items, "BEM computation completed successfully.", "success")
+else:
+    add_info_to_product(report_items, "BEM surfaces generated but model failed — inspect report images.", "warning")
 create_product_json(report_items)
 print("Done.")
