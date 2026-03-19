@@ -164,6 +164,9 @@ else:
         create_product_json(report_items)
         sys.exit(1)
 
+_brain_surfaces = "white" if os.path.isfile(
+    os.path.join(subjects_dir, subject, 'surf', 'lh.white')) else None
+
 def _expand_anterior(coords, mm):
     """Push outer skull/skin vertices outward, anterior-weighted.
     Vertices facing anteriorly (+y in RAS) are pushed by up to mm mm;
@@ -207,9 +210,22 @@ except Exception as e:
         try:
             skull_coords, skull_tris = mne.read_surface(outer_skull_path)
             skin_coords,  skin_tris  = mne.read_surface(outer_skin_path)
-            mne.write_bem_surfaces if False else None  # noqa
+
+            # Capture BEFORE plot (surfaces with intersection)
+            _before_img = None
+            try:
+                _fig = mne.viz.plot_bem(subject=subject, subjects_dir=subjects_dir,
+                    brain_surfaces=_brain_surfaces, orientation='axial',
+                    slices=[137], show=False)
+                _fig.canvas.draw()
+                _before_img = np.asarray(_fig.canvas.buffer_rgba())[..., :3]
+                plt.close(_fig)
+            except Exception:
+                pass
+
             mne.write_surface(outer_skull_path, _expand_anterior(skull_coords, bem_expansion_mm), skull_tris, overwrite=True)
             mne.write_surface(outer_skin_path,  _expand_anterior(skin_coords,  bem_expansion_mm), skin_tris,  overwrite=True)
+
             model = mne.make_bem_model(
                 subject, ico=ico, conductivity=conductivity,
                 subjects_dir=subjects_dir, verbose=False
@@ -221,6 +237,28 @@ except Exception as e:
                 "info"
             )
             bem_ok = True
+
+            # Capture AFTER plot and save before/after comparison
+            try:
+                _fig = mne.viz.plot_bem(subject=subject, subjects_dir=subjects_dir,
+                    brain_surfaces=_brain_surfaces, orientation='axial',
+                    slices=[137], show=False)
+                _fig.canvas.draw()
+                _after_img = np.asarray(_fig.canvas.buffer_rgba())[..., :3]
+                plt.close(_fig)
+
+                if _before_img is not None:
+                    _comp, _axs = plt.subplots(1, 2, figsize=(10, 5))
+                    _axs[0].imshow(_before_img); _axs[0].set_title('Before expansion\n(intersection)', fontsize=10, color='red'); _axs[0].axis('off')
+                    _axs[1].imshow(_after_img);  _axs[1].set_title(f'After +{bem_expansion_mm}mm anterior\n(fixed)', fontsize=10, color='lime'); _axs[1].axis('off')
+                    _comp.patch.set_facecolor('black')
+                    _comp_path = os.path.join('out_figs', 'bem_expansion_fix.png')
+                    _comp.savefig(_comp_path, dpi=100, bbox_inches='tight', facecolor='black')
+                    plt.close(_comp)
+                    add_image_to_product(report_items, 'BEM expansion fix — axial slice 137', filepath=_comp_path)
+            except Exception:
+                pass
+
         except Exception as e2:
             add_info_to_product(
                 report_items,
@@ -254,9 +292,6 @@ if bem_ok:
         bem_ok = False
 
 # == QC FIGURE FOR PRODUCT.JSON — middle slice from all 3 orientations, side-by-side ==
-_brain_surfaces = "white"
-if not os.path.isfile(os.path.join(subjects_dir, subject, 'surf', 'lh.white')):
-    _brain_surfaces = None
 
 def _crop_middle_slice(fig):
     """Render fig, crop out the middle subplot, return as RGB array."""
