@@ -123,7 +123,7 @@ if n_layers == 3:
 else:
     surfaces_exist = os.path.isfile(inner_surf)
 
-if surfaces_exist:
+if False:
     add_info_to_product(report_items, "BEM surfaces found — skipping watershed step.", "info")
 else:
     add_info_to_product(report_items, "Running FreeSurfer watershed BEM...", "info")
