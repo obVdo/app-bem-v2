@@ -130,7 +130,7 @@ else:
     try:
         import subprocess
         subprocess.run(
-            ['mne', 'watershed_bem', '-s', subject, '-d', subjects_dir, '-o', '-a'],
+            ['mne', 'watershed_bem', '-s', subject, '-d', subjects_dir, '-o', '-g'],
             check=True
         )
         add_info_to_product(report_items, "Watershed BEM surfaces created.", "info")
